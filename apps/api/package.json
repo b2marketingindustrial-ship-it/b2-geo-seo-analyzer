@@ -1,0 +1,38 @@
+{
+  "name": "@b2/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "B2 GEO/SEO Analyzer — NestJS API backend",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "nest build",
+    "start": "node dist/main",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@b2/analyzers": "workspace:*",
+    "@b2/contracts": "workspace:*",
+    "@b2/scoring-engine": "workspace:*",
+    "@b2/worker-crawler": "workspace:*",
+    "@nestjs/common": "^10.4.15",
+    "@nestjs/core": "^10.4.15",
+    "@nestjs/platform-express": "^10.4.15",
+    "@nestjs/swagger": "^8.1.0",
+    "@prisma/client": "^7.9.0",
+    "dotenv": "^17.4.2",
+    "prisma": "^7.9.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.4.9",
+    "@nestjs/schematics": "^10.2.3",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

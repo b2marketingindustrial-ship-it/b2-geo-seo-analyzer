@@ -1,0 +1,20 @@
+{
+  "name": "@b2/fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fixtures HTML e golden tests para calibração do B2 GEO/SEO Analyzer",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@b2/contracts": "workspace:*",
+    "@b2/scoring-engine": "workspace:*",
+    "@b2/analyzers": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

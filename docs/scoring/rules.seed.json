@@ -1,0 +1,151 @@
+{
+  "schemaVersion": "1.0",
+  "rulesets": [
+    {
+      "key": "seo-ruleset",
+      "version": "1.0.0-draft",
+      "scoreType": "seo",
+      "categories": [
+        {"key": "crawl_indexability", "weight": 18},
+        {"key": "on_page", "weight": 15},
+        {"key": "content_intent", "weight": 18},
+        {"key": "structure_links", "weight": 12},
+        {"key": "images_media", "weight": 7},
+        {"key": "structured_data", "weight": 8},
+        {"key": "performance", "weight": 15},
+        {"key": "mobile_accessibility", "weight": 7}
+      ],
+      "rules": [
+        {
+          "key": "seo.indexability.http_status",
+          "categoryKey": "crawl_indexability",
+          "evaluationType": "deterministic",
+          "severity": "critical",
+          "maxPoints": 3.0,
+          "evaluator": "httpStatusEvaluator",
+          "confidenceBase": 0.99,
+          "configuration": {"accepted": [200]},
+          "remediationTemplateKey": "fix_http_status"
+        },
+        {
+          "key": "seo.indexability.noindex",
+          "categoryKey": "crawl_indexability",
+          "evaluationType": "deterministic",
+          "severity": "critical",
+          "maxPoints": 4.0,
+          "evaluator": "indexabilityDirectiveEvaluator",
+          "confidenceBase": 0.99,
+          "configuration": {"criticalGateMaxScore": 35},
+          "remediationTemplateKey": "remove_unintended_noindex"
+        },
+        {
+          "key": "seo.meta.title_present",
+          "categoryKey": "on_page",
+          "evaluationType": "deterministic",
+          "severity": "high",
+          "maxPoints": 2.0,
+          "evaluator": "presenceEvaluator",
+          "confidenceBase": 0.99,
+          "configuration": {"fact": "page.meta.title"},
+          "remediationTemplateKey": "add_page_title",
+          "causeGroup": "page_title"
+        },
+        {
+          "key": "seo.meta.title_relevance",
+          "categoryKey": "on_page",
+          "evaluationType": "semantic",
+          "severity": "medium",
+          "maxPoints": 2.5,
+          "evaluator": "titleIntentSemanticEvaluator",
+          "confidenceBase": 0.75,
+          "configuration": {},
+          "remediationTemplateKey": "improve_page_title",
+          "causeGroup": "page_title"
+        },
+        {
+          "key": "seo.schema.valid_jsonld",
+          "categoryKey": "structured_data",
+          "evaluationType": "deterministic",
+          "severity": "medium",
+          "maxPoints": 2.0,
+          "evaluator": "jsonLdValidityEvaluator",
+          "confidenceBase": 0.98,
+          "configuration": {},
+          "remediationTemplateKey": "fix_jsonld"
+        }
+      ]
+    },
+    {
+      "key": "geo-ruleset",
+      "version": "1.0.0-draft",
+      "scoreType": "geo",
+      "categories": [
+        {"key": "access_retrievability", "weight": 12},
+        {"key": "entity_offer_clarity", "weight": 16},
+        {"key": "answer_completeness", "weight": 20},
+        {"key": "authority_evidence", "weight": 20},
+        {"key": "semantic_citability", "weight": 10},
+        {"key": "structured_identity", "weight": 8},
+        {"key": "local_commercial", "weight": 8},
+        {"key": "freshness_transparency", "weight": 6}
+      ],
+      "rules": [
+        {
+          "key": "geo.access.oai_searchbot",
+          "categoryKey": "access_retrievability",
+          "evaluationType": "deterministic",
+          "severity": "high",
+          "maxPoints": 2.0,
+          "evaluator": "robotsUserAgentEvaluator",
+          "confidenceBase": 0.96,
+          "configuration": {"userAgent": "OAI-SearchBot"},
+          "remediationTemplateKey": "review_oai_searchbot_access"
+        },
+        {
+          "key": "geo.entity.organization_identified",
+          "categoryKey": "entity_offer_clarity",
+          "evaluationType": "semantic",
+          "severity": "high",
+          "maxPoints": 3.0,
+          "evaluator": "organizationClarityEvaluator",
+          "confidenceBase": 0.82,
+          "configuration": {},
+          "remediationTemplateKey": "clarify_organization"
+        },
+        {
+          "key": "geo.entity.offer_identified",
+          "categoryKey": "entity_offer_clarity",
+          "evaluationType": "semantic",
+          "severity": "high",
+          "maxPoints": 4.0,
+          "evaluator": "offerClarityEvaluator",
+          "confidenceBase": 0.80,
+          "configuration": {},
+          "remediationTemplateKey": "clarify_offer"
+        },
+        {
+          "key": "geo.authority.claims_supported",
+          "categoryKey": "authority_evidence",
+          "evaluationType": "semantic",
+          "severity": "medium",
+          "maxPoints": 4.0,
+          "evaluator": "claimEvidenceEvaluator",
+          "confidenceBase": 0.72,
+          "configuration": {"unsupportedClaimPenaltyCap": 4.0},
+          "remediationTemplateKey": "support_claims_with_evidence"
+        },
+        {
+          "key": "geo.local.service_area",
+          "categoryKey": "local_commercial",
+          "evaluationType": "semantic",
+          "severity": "medium",
+          "maxPoints": 2.0,
+          "evaluator": "serviceAreaEvaluator",
+          "confidenceBase": 0.78,
+          "configuration": {},
+          "remediationTemplateKey": "add_service_area"
+        }
+      ]
+    }
+  ]
+}

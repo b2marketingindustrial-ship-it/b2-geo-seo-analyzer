@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "B2 GEO/SEO Analyzer",
+  "version": "0.1.0",
+  "description": "Analisa páginas para SEO e preparação para mecanismos generativos de IA",
+  "permissions": ["activeTab", "scripting", "storage", "sidePanel"],
+  "host_permissions": [],
+  "action": {
+    "default_title": "B2 GEO/SEO Analyzer"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel.html"
+  },
+  "background": {
+    "service_worker": "src/service-worker.ts"
+  },
+  "minimum_chrome_version": "114",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

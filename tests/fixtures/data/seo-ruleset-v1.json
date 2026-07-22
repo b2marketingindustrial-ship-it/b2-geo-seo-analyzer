@@ -1,0 +1,191 @@
+{
+  "key": "seo-ruleset-1.0.0",
+  "version": "1.0.0",
+  "scoreType": "seo",
+  "status": "active",
+  "effectiveAt": "2026-07-22T00:00:00Z",
+  "changelog": "Initial SEO ruleset for MVP calibration",
+  "categories": [
+    { "key": "indexability", "name": "Rastreamento e indexabilidade", "weight": 18, "penaltyCap": 50 },
+    { "key": "on_page_metadata", "name": "Metadados e relevância on-page", "weight": 15, "penaltyCap": 30 },
+    { "key": "content", "name": "Conteúdo e intenção", "weight": 18, "penaltyCap": 35 },
+    { "key": "structure_links", "name": "Estrutura e links internos", "weight": 12, "penaltyCap": 25 },
+    { "key": "images_media", "name": "Imagens e mídia", "weight": 7, "penaltyCap": 15 },
+    { "key": "schemas", "name": "Dados estruturados", "weight": 8, "penaltyCap": 15 },
+    { "key": "performance", "name": "Performance e experiência", "weight": 15, "penaltyCap": 30 },
+    { "key": "mobile_accessibility", "name": "Mobile e acessibilidade essencial", "weight": 7, "penaltyCap": 15 }
+  ],
+  "gates": [
+    { "condition": "rule:seo.indexability.noindex=FAIL", "maxScore": 35, "explanation": "A página possui noindex e não será indexada" }
+  ],
+  "rules": [
+    {
+      "key": "seo.indexability.noindex",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "indexability",
+      "title": "Meta robots noindex",
+      "description": "Verifica se a página não possui meta robots com valor noindex, o que impediria a indexação.",
+      "severity": "critical",
+      "maxPenalty": 18,
+      "pointsAvailable": 18,
+      "evaluationType": "deterministic",
+      "preconditions": [
+        { "fact": "metadata.robots", "operator": "exists" }
+      ],
+      "evaluator": "meta-robots-evaluator",
+      "confidenceBase": 0.95,
+      "remediationTemplateKey": "remove_noindex"
+    },
+    {
+      "key": "seo.metadata.title",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "on_page_metadata",
+      "title": "Title presente e descritivo",
+      "description": "Verifica se a página possui um título único e descritivo.",
+      "severity": "high",
+      "maxPenalty": 8,
+      "pointsAvailable": 8,
+      "evaluationType": "deterministic",
+      "preconditions": [
+        { "fact": "metadata.title", "operator": "exists" }
+      ],
+      "evaluator": "title-quality-evaluator",
+      "confidenceBase": 0.95,
+      "remediationTemplateKey": "add_descriptive_title"
+    },
+    {
+      "key": "seo.metadata.description",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "on_page_metadata",
+      "title": "Meta description presente",
+      "description": "Verifica se a página possui meta description.",
+      "severity": "medium",
+      "maxPenalty": 7,
+      "pointsAvailable": 7,
+      "evaluationType": "deterministic",
+      "preconditions": [
+        { "fact": "metadata.description", "operator": "exists" }
+      ],
+      "evaluator": "description-present-evaluator",
+      "confidenceBase": 0.95,
+      "remediationTemplateKey": "add_meta_description"
+    },
+    {
+      "key": "seo.metadata.canonical",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "indexability",
+      "title": "Canonical presente",
+      "description": "Verifica se a página possui canonical tag.",
+      "severity": "medium",
+      "maxPenalty": 5,
+      "pointsAvailable": 5,
+      "evaluationType": "deterministic",
+      "preconditions": [
+        { "fact": "metadata.canonical", "operator": "exists" }
+      ],
+      "evaluator": "canonical-evaluator",
+      "confidenceBase": 0.95,
+      "remediationTemplateKey": "add_canonical"
+    },
+    {
+      "key": "seo.content.h1",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "content",
+      "title": "H1 presente e único",
+      "description": "Verifica se a página possui exatamente um H1.",
+      "severity": "high",
+      "maxPenalty": 9,
+      "pointsAvailable": 9,
+      "evaluationType": "deterministic",
+      "preconditions": [],
+      "evaluator": "h1-evaluator",
+      "confidenceBase": 0.95,
+      "remediationTemplateKey": "add_single_h1"
+    },
+    {
+      "key": "seo.content.heading_order",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "content",
+      "title": "Ordem de headings",
+      "description": "Verifica se os headings estão em ordem hierárquica correta.",
+      "severity": "medium",
+      "maxPenalty": 5,
+      "pointsAvailable": 5,
+      "evaluationType": "deterministic",
+      "preconditions": [],
+      "evaluator": "heading-order-evaluator",
+      "confidenceBase": 0.90,
+      "remediationTemplateKey": "fix_heading_order"
+    },
+    {
+      "key": "seo.images.alt",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "images_media",
+      "title": "Imagens com alt text",
+      "description": "Verifica se todas as imagens informativas possuem alt text.",
+      "severity": "medium",
+      "maxPenalty": 7,
+      "pointsAvailable": 7,
+      "evaluationType": "deterministic",
+      "preconditions": [],
+      "evaluator": "image-alt-evaluator",
+      "confidenceBase": 0.90,
+      "remediationTemplateKey": "add_alt_text"
+    },
+    {
+      "key": "seo.content.language",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "content",
+      "title": "Idioma declarado",
+      "description": "Verifica se o idioma da página está declarado no elemento HTML.",
+      "severity": "medium",
+      "maxPenalty": 4,
+      "pointsAvailable": 4,
+      "evaluationType": "deterministic",
+      "preconditions": [],
+      "evaluator": "language-evaluator",
+      "confidenceBase": 0.95,
+      "remediationTemplateKey": "declare_language"
+    },
+    {
+      "key": "seo.schemas.valid_jsonld",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "schemas",
+      "title": "JSON-LD válido",
+      "description": "Verifica se os dados estruturados JSON-LD são válidos.",
+      "severity": "medium",
+      "maxPenalty": 8,
+      "pointsAvailable": 8,
+      "evaluationType": "deterministic",
+      "preconditions": [],
+      "evaluator": "jsonld-valid-evaluator",
+      "confidenceBase": 0.95,
+      "remediationTemplateKey": "fix_jsonld"
+    },
+    {
+      "key": "seo.content.text_length",
+      "version": "1.0.0",
+      "scoreType": "seo",
+      "categoryKey": "content",
+      "title": "Conteúdo textual suficiente",
+      "description": "Verifica se a página possui conteúdo textual suficiente para descrever o tema.",
+      "severity": "low",
+      "maxPenalty": 5,
+      "pointsAvailable": 5,
+      "evaluationType": "deterministic",
+      "preconditions": [],
+      "evaluator": "text-length-evaluator",
+      "confidenceBase": 0.85,
+      "remediationTemplateKey": "add_more_content"
+    }
+  ]
+}

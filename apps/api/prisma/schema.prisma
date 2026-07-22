@@ -1,0 +1,428 @@
+// B2 GEO/SEO Analyzer — Prisma Schema
+// @see docs/08_MODELO_DE_DADOS.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──── Identity & Access ────
+
+model Organization {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(255)
+  slug        String   @unique @db.VarChar(100)
+  planKey     String   @default("starter") @map("plan_key") @db.VarChar(50)
+  status      String   @default("active") @db.VarChar(20)
+  brandSettings Json   @default("{}") @map("brand_settings")
+  dataRegion  String   @default("br") @map("data_region") @db.VarChar(10)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members     OrganizationMember[]
+  projects    Project[]
+  analysisRuns AnalysisRun[]
+  findings    Finding[]
+  auditLogs   AuditLog[]
+  integrations Integration[]
+
+  @@map("organizations")
+}
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  email       String   @unique @db.VarChar(255)
+  name        String?  @db.VarChar(255)
+  status      String   @default("active") @db.VarChar(20)
+  locale      String   @default("pt-BR") @db.VarChar(10)
+  timezone    String   @default("America/Sao_Paulo") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  memberships OrganizationMember[]
+  createdAnalyses AnalysisRun[] @relation("CreatedBy")
+  actionItems ActionItem[]
+
+  @@map("users")
+}
+
+model OrganizationMember {
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  role           String   @default("viewer") @db.VarChar(20)
+  status         String   @default("active") @db.VarChar(20)
+  invitedBy      String?  @map("invited_by") @db.Uuid
+  joinedAt       DateTime @default(now()) @map("joined_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, userId])
+  @@map("organization_members")
+}
+
+// ──── Projects ────
+
+model Project {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  primaryDomain  String?  @map("primary_domain") @db.VarChar(500)
+  countryCode    String   @default("BR") @map("country_code") @db.VarChar(5)
+  languageCode   String   @default("pt-BR") @map("language_code") @db.VarChar(10)
+  timezone       String   @default("America/Sao_Paulo") @db.VarChar(50)
+  companyProfile Json     @default("{}") @map("company_profile")
+  crawlSettings  Json     @default("{}") @map("crawl_settings")
+  scoreSettings  Json     @default("{}") @map("score_settings")
+  status         String   @default("active") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entities      ProjectEntity[]
+  urls          Url[]
+  analysisRuns  AnalysisRun[]
+  findings      Finding[]
+  actionPlans   ActionPlan[]
+  visibilityPrompts VisibilityPrompt[]
+
+  @@map("projects")
+}
+
+model ProjectEntity {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  type           String   @db.VarChar(30)
+  name           String   @db.VarChar(255)
+  normalizedName String   @map("normalized_name") @db.VarChar(255)
+  aliases        String[] @default([])
+  metadata       Json     @default("{}")
+  isConfirmed    Boolean  @default(false) @map("is_confirmed")
+  source         String   @default("manual") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_entities")
+}
+
+model Url {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @map("project_id") @db.Uuid
+  normalizedUrl String   @map("normalized_url") @db.VarChar(2048)
+  urlHash       String   @map("url_hash") @db.VarChar(64)
+  firstSeenAt   DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt    DateTime @default(now()) @map("last_seen_at")
+  pageType      String?  @map("page_type") @db.VarChar(50)
+  importance    Int      @default(3) @db.SmallInt
+  status        String   @default("active") @db.VarChar(20)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, urlHash])
+  @@map("urls")
+}
+
+// ──── Analysis ────
+
+model AnalysisRun {
+  id               String   @id @default(uuid()) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  projectId        String   @map("project_id") @db.Uuid
+  urlId            String?  @map("url_id") @db.Uuid
+  type             String   @db.VarChar(20)
+  source           String   @db.VarChar(20)
+  status           String   @default("queued") @db.VarChar(20)
+  requestedModules String[] @default([]) @map("requested_modules")
+  completedModules String[] @default([]) @map("completed_modules")
+  rulesetVersions  Json     @default("{}") @map("ruleset_versions")
+  progress         Int      @default(0) @db.SmallInt
+  coverage         Float    @default(0)
+  confidence       Int      @default(0) @db.SmallInt
+  startedAt        DateTime? @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+  createdBy        String?  @map("created_by") @db.Uuid
+  correlationId    String?  @map("correlation_id") @db.Uuid
+  errorSummary     String?  @map("error_summary")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator      User?        @relation("CreatedBy", fields: [createdBy], references: [id])
+  modules      AnalysisModule[]
+  snapshots    PageSnapshot[]
+  findings     Finding[]
+  scores       Score[]
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
+  @@map("analysis_runs")
+}
+
+model AnalysisModule {
+  id             String    @id @default(uuid()) @db.Uuid
+  analysisRunId  String    @map("analysis_run_id") @db.Uuid
+  moduleKey      String    @map("module_key") @db.VarChar(50)
+  moduleVersion  String    @map("module_version") @db.VarChar(20)
+  status         String    @default("queued") @db.VarChar(20)
+  coverage       Float     @default(0)
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  attempts       Int       @default(0) @db.SmallInt
+  errorCode      String?   @map("error_code") @db.VarChar(50)
+  errorMessage   String?   @map("error_message")
+  metrics        Json      @default("{}")
+
+  analysisRun AnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  @@map("analysis_modules")
+}
+
+model PageSnapshot {
+  id                 String   @id @default(uuid()) @db.Uuid
+  analysisRunId      String   @map("analysis_run_id") @db.Uuid
+  urlId              String?  @map("url_id") @db.Uuid
+  captureSource      String   @map("capture_source") @db.VarChar(30)
+  finalUrl           String?  @map("final_url") @db.VarChar(2048)
+  httpStatus         Int?     @map("http_status") @db.SmallInt
+  contentType        String?  @map("content_type") @db.VarChar(100)
+  sourceHash         String?  @map("source_hash") @db.VarChar(64)
+  renderedHash       String?  @map("rendered_hash") @db.VarChar(64)
+  facts              Json     @default("{}")
+  capturedAt         DateTime @default(now()) @map("captured_at")
+  expiresAt          DateTime @default(now()) @map("expires_at")
+
+  analysisRun AnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  @@map("page_snapshots")
+}
+
+// ──── Findings & Scores ────
+
+model Finding {
+  id                 String   @id @default(uuid()) @db.Uuid
+  organizationId     String   @map("organization_id") @db.Uuid
+  projectId          String   @map("project_id") @db.Uuid
+  analysisRunId      String   @map("analysis_run_id") @db.Uuid
+  urlId              String?  @map("url_id") @db.Uuid
+  ruleKey            String   @map("rule_key") @db.VarChar(100)
+  ruleVersion        String   @map("rule_version") @db.VarChar(20)
+  scoreType          String   @map("score_type") @db.VarChar(20)
+  categoryKey        String   @map("category_key") @db.VarChar(50)
+  status             String   @db.VarChar(20)
+  severity           String   @db.VarChar(10)
+  title              String   @db.VarChar(500)
+  explanation        String?
+  impactText         String?  @map("impact_text")
+  remediationText    String?  @map("remediation_text")
+  acceptanceCriteria String?  @map("acceptance_criteria")
+  qualityRatio       Float    @default(0) @map("quality_ratio")
+  pointsAvailable    Float    @default(0) @map("points_available")
+  pointsEarned       Float    @default(0) @map("points_earned")
+  confidence         Float    @default(0)
+  effort             Int      @default(3) @db.SmallInt
+  priority           String   @default("P3") @db.VarChar(3)
+  causeGroup         String?  @map("cause_group") @db.VarChar(100)
+  data               Json     @default("{}")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysisRun  AnalysisRun  @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+  evidences    Evidence[]
+  actionItems  ActionItem[]
+
+  @@index([analysisRunId, severity, status])
+  @@index([projectId, ruleKey, createdAt(sort: Desc)])
+  @@map("findings")
+}
+
+model Evidence {
+  id             String   @id @default(uuid()) @db.Uuid
+  findingId      String   @map("finding_id") @db.Uuid
+  type           String   @db.VarChar(30)
+  source         String?  @db.VarChar(30)
+  selector       String?
+  excerpt        String?
+  attributeName  String?  @map("attribute_name") @db.VarChar(100)
+  attributeValue String?  @map("attribute_value")
+  data           Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  finding Finding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@map("evidences")
+}
+
+model Score {
+  id              String   @id @default(uuid()) @db.Uuid
+  analysisRunId   String   @map("analysis_run_id") @db.Uuid
+  scoreType       String   @map("score_type") @db.VarChar(20)
+  rulesetVersion  String   @map("ruleset_version") @db.VarChar(20)
+  score           Int      @default(0) @db.SmallInt
+  coverage        Float    @default(0)
+  confidence      Int      @default(0) @db.SmallInt
+  categories      Json     @default("[]")
+  gates           Json     @default("[]")
+  calculatedAt    DateTime @default(now()) @map("calculated_at")
+
+  analysisRun AnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisRunId, scoreType])
+  @@map("scores")
+}
+
+// ──── Action Plans ────
+
+model ActionPlan {
+  id                   String   @id @default(uuid()) @db.Uuid
+  projectId            String   @map("project_id") @db.Uuid
+  sourceAnalysisRunId  String?  @map("source_analysis_run_id") @db.Uuid
+  name                 String?  @db.VarChar(255)
+  status               String   @default("active") @db.VarChar(20)
+  generatedAt          DateTime @default(now()) @map("generated_at")
+  generatedBy          String?  @map("generated_by") @db.Uuid
+  settings             Json     @default("{}")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items   ActionItem[]
+
+  @@map("action_plans")
+}
+
+model ActionItem {
+  id                 String    @id @default(uuid()) @db.Uuid
+  actionPlanId       String    @map("action_plan_id") @db.Uuid
+  findingId          String?   @map("finding_id") @db.Uuid
+  title              String    @db.VarChar(500)
+  description        String?
+  discipline         String    @db.VarChar(30)
+  priority           String    @default("P3") @db.VarChar(3)
+  impact             Int       @default(3) @db.SmallInt
+  effort             Int       @default(3) @db.SmallInt
+  urgency            Int       @default(3) @db.SmallInt
+  confidence         Float     @default(0.5)
+  estimatedScoreGain Float     @default(0) @map("estimated_score_gain")
+  ownerUserId        String?   @map("owner_user_id") @db.Uuid
+  dueDate            DateTime? @map("due_date")
+  status             String    @default("open") @db.VarChar(20)
+  acceptanceCriteria String?   @map("acceptance_criteria")
+  sourceType         String    @default("finding") @map("source_type") @db.VarChar(20)
+  manualOrder        Int       @default(0) @map("manual_order")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  actionPlan ActionPlan @relation(fields: [actionPlanId], references: [id], onDelete: Cascade)
+  finding    Finding?   @relation(fields: [findingId], references: [id])
+  owner      User?      @relation(fields: [ownerUserId], references: [id])
+
+  @@index([actionPlanId, status, priority])
+  @@map("action_items")
+}
+
+// ──── Rulesets ────
+
+model Ruleset {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @db.VarChar(100)
+  version     String   @db.VarChar(20)
+  scoreType   String   @map("score_type") @db.VarChar(20)
+  status      String   @default("draft") @db.VarChar(20)
+  effectiveAt DateTime? @map("effective_at")
+  definition  Json     @default("{}")
+  changelog   String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([key, version])
+  @@map("rulesets")
+}
+
+// ──── AI Visibility ────
+
+model VisibilityPrompt {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  text      String
+  language  String   @db.VarChar(10)
+  intent    String?  @db.VarChar(50)
+  topic     String?  @db.VarChar(100)
+  region    String?  @db.VarChar(100)
+  priority  Int      @default(3) @db.SmallInt
+  source    String   @default("manual") @db.VarChar(20)
+  version   String   @default("1.0") @db.VarChar(10)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  runs    VisibilityRun[]
+
+  @@map("visibility_prompts")
+}
+
+model VisibilityRun {
+  id                  String   @id @default(uuid()) @db.Uuid
+  projectId           String   @map("project_id") @db.Uuid
+  promptId            String   @map("prompt_id") @db.Uuid
+  provider            String   @db.VarChar(50)
+  model               String   @db.VarChar(100)
+  configuration       Json     @default("{}")
+  status              String   @db.VarChar(20)
+  executedAt          DateTime @default(now()) @map("executed_at")
+  latencyMs           Int?     @map("latency_ms")
+  costAmount          Float?   @map("cost_amount")
+  costCurrency        String?  @default("USD") @map("cost_currency") @db.VarChar(3)
+  normalizedResponse  Json?    @map("normalized_response")
+  confidence          Float?   @default(0)
+  errorCode           String?  @map("error_code") @db.VarChar(50)
+
+  prompt   VisibilityPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([promptId, provider, executedAt(sort: Desc)])
+  @@map("visibility_runs")
+}
+
+// ──── Integrations ────
+
+model Integration {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  provider       String   @db.VarChar(50)
+  status         String   @db.VarChar(20)
+  credentials    String?  // encrypted
+  scopes         String[] @default([])
+  metadata       Json     @default("{}")
+  connectedBy    String?  @map("connected_by") @db.Uuid
+  connectedAt    DateTime @default(now()) @map("connected_at")
+  expiresAt      DateTime? @map("expires_at")
+  lastSyncAt     DateTime? @map("last_sync_at")
+  errorState     String?  @map("error_state")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("integrations")
+}
+
+// ──── Audit ────
+
+model AuditLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  actorUserId      String?  @map("actor_user_id") @db.Uuid
+  action           String   @db.VarChar(100)
+  resourceType     String?  @map("resource_type") @db.VarChar(50)
+  resourceId       String?  @map("resource_id") @db.Uuid
+  ipHash           String?  @map("ip_hash") @db.VarChar(64)
+  userAgentSummary String?  @map("user_agent_summary") @db.VarChar(200)
+  metadata         Json     @default("{}")
+  occurredAt       DateTime @default(now()) @map("occurred_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, occurredAt(sort: Desc)])
+  @@map("audit_logs")
+}

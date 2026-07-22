@@ -1,0 +1,28 @@
+{
+  "name": "b2-geo-seo-analyzer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "B2 GEO/SEO Analyzer — Plataforma SaaS de auditoria de visibilidade digital para SEO e mecanismos generativos de IA",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:e2e": "turbo test:e2e",
+    "db:migrate": "turbo db:migrate",
+    "db:seed": "turbo db:seed",
+    "extension:build": "turbo extension:build",
+    "clean": "turbo clean",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml}\""
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3"
+  }
+}

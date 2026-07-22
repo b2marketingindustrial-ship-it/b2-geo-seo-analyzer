@@ -1,0 +1,104 @@
+name: CI — Build, Lint, Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: TypeScript & Lint & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: b2_geo
+          POSTGRES_PASSWORD: b2_geo_ci
+          POSTGRES_DB: b2_geo_seo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests (golden)
+        run: cd tests/fixtures && npx vitest run --no-watch
+        env:
+          DATABASE_URL: postgresql://b2_geo:b2_geo_ci@localhost:5432/b2_geo_seo
+
+      - name: Build
+        run: pnpm build
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Secret scanning (trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
+
+  docker:
+    name: Docker Compose Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start services
+        run: |
+          docker compose -f infrastructure/docker/docker-compose.yml up -d
+          sleep 10
+
+      - name: Verify PostgreSQL
+        run: docker exec b2-geo-postgres pg_isready -U b2_geo -d b2_geo_seo
+
+      - name: Verify Redis
+        run: docker exec b2-geo-redis redis-cli ping
+
+      - name: Verify MinIO
+        run: curl -s http://localhost:9000/minio/health/live
+
+      - name: Cleanup
+        run: docker compose -f infrastructure/docker/docker-compose.yml down -v

@@ -1,0 +1,547 @@
+openapi: 3.1.0
+info:
+  title: B2 GEO/SEO Analyzer API
+  version: 0.1.0
+  description: API inicial para projetos, análises, findings, scores e planos de ação.
+servers:
+  - url: https://api.example.com/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Projects
+  - name: Analysis
+  - name: Action Plans
+  - name: AI Visibility
+  - name: Integrations
+paths:
+  /projects:
+    get:
+      tags: [Projects]
+      operationId: listProjects
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Lista de projetos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+    post:
+      tags: [Projects]
+      operationId: createProject
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Projeto criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}:
+    get:
+      tags: [Projects]
+      operationId: getProject
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Projeto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Projects]
+      operationId: updateProject
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Projeto atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+  /extension/page-captures:
+    post:
+      tags: [Analysis]
+      operationId: createPageCapture
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageCaptureRequest'
+      responses:
+        '201':
+          description: Captura recebida
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, capturedAt]
+                properties:
+                  id: { type: string, format: uuid }
+                  capturedAt: { type: string, format: date-time }
+  /analysis-runs:
+    post:
+      tags: [Analysis]
+      operationId: createAnalysisRun
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnalysisRunRequest'
+      responses:
+        '202':
+          description: Análise enfileirada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisRun'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /analysis-runs/{analysisRunId}:
+    get:
+      tags: [Analysis]
+      operationId: getAnalysisRun
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/AnalysisRunId'
+      responses:
+        '200':
+          description: Estado da análise
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisRun'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /analysis-runs/{analysisRunId}/cancel:
+    post:
+      tags: [Analysis]
+      operationId: cancelAnalysisRun
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/AnalysisRunId'
+      responses:
+        '202':
+          description: Cancelamento solicitado
+  /analysis-runs/{analysisRunId}/findings:
+    get:
+      tags: [Analysis]
+      operationId: listFindings
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/AnalysisRunId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, high, medium, low, info]
+        - name: scoreType
+          in: query
+          schema:
+            type: string
+            enum: [seo, geo, ai_visibility]
+      responses:
+        '200':
+          description: Findings paginados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingList'
+  /analysis-runs/{analysisRunId}/scores:
+    get:
+      tags: [Analysis]
+      operationId: getScores
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/AnalysisRunId'
+      responses:
+        '200':
+          description: Scores da análise
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Score'
+  /action-plans:
+    post:
+      tags: [Action Plans]
+      operationId: createActionPlan
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, analysisRunId]
+              properties:
+                projectId: { type: string, format: uuid }
+                analysisRunId: { type: string, format: uuid }
+                name: { type: string, maxLength: 160 }
+      responses:
+        '201':
+          description: Plano criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionPlan'
+  /action-plans/{actionPlanId}:
+    get:
+      tags: [Action Plans]
+      operationId: getActionPlan
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - name: actionPlanId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Plano
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionPlan'
+  /action-items/{actionItemId}:
+    patch:
+      tags: [Action Plans]
+      operationId: updateActionItem
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - name: actionItemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, in_progress, blocked, done, ignored]
+                ownerUserId: { type: [string, 'null'], format: uuid }
+                dueDate: { type: [string, 'null'], format: date }
+                priority:
+                  type: string
+                  enum: [P0, P1, P2, P3, P4]
+      responses:
+        '200':
+          description: Item atualizado
+  /projects/{projectId}/visibility-prompts:
+    get:
+      tags: [AI Visibility]
+      operationId: listVisibilityPrompts
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Prompts
+    post:
+      tags: [AI Visibility]
+      operationId: createVisibilityPrompt
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVisibilityPromptRequest'
+      responses:
+        '201':
+          description: Prompt criado
+  /projects/{projectId}/visibility-runs:
+    post:
+      tags: [AI Visibility]
+      operationId: createVisibilityRun
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [promptIds, providers]
+              properties:
+                promptIds:
+                  type: array
+                  minItems: 1
+                  items: { type: string, format: uuid }
+                providers:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    enum: [openai, anthropic, gemini]
+      responses:
+        '202':
+          description: Execução enfileirada
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrganizationId:
+      name: X-Organization-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 128 }
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AnalysisRunId:
+      name: analysisRunId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+  responses:
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Conflito
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ValidationError:
+      description: Dados inválidos
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    Project:
+      type: object
+      required: [id, organizationId, name, primaryDomain, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        name: { type: string }
+        primaryDomain: { type: string }
+        countryCode: { type: string, minLength: 2, maxLength: 2 }
+        languageCode: { type: string }
+        companyProfile: { type: object, additionalProperties: true }
+        status: { type: string, enum: [active, archived, pending_deletion] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProjectList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Project' }
+        nextCursor: { type: [string, 'null'] }
+    CreateProjectRequest:
+      type: object
+      required: [name, primaryDomain, countryCode, languageCode]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 160 }
+        primaryDomain: { type: string, minLength: 3, maxLength: 255 }
+        countryCode: { type: string, minLength: 2, maxLength: 2 }
+        languageCode: { type: string, minLength: 2, maxLength: 10 }
+        companyProfile: { type: object, additionalProperties: true }
+    UpdateProjectRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 160 }
+        companyProfile: { type: object, additionalProperties: true }
+        crawlSettings: { type: object, additionalProperties: true }
+        scoreSettings: { type: object, additionalProperties: true }
+        status: { type: string, enum: [active, archived] }
+    PageCaptureRequest:
+      type: object
+      required: [projectId, schemaVersion, capturedAt, url, document, metadata]
+      properties:
+        projectId: { type: string, format: uuid }
+        schemaVersion: { type: string }
+        capturedAt: { type: string, format: date-time }
+        url: { type: string, format: uri }
+        document: { type: object, additionalProperties: true }
+        metadata: { type: object, additionalProperties: true }
+        headings: { type: array, items: { type: object, additionalProperties: true } }
+        textBlocks: { type: array, items: { type: object, additionalProperties: true } }
+        links: { type: array, items: { type: object, additionalProperties: true } }
+        images: { type: array, items: { type: object, additionalProperties: true } }
+        schemas: { type: array, items: { type: object, additionalProperties: true } }
+        localFindings: { type: array, items: { type: object, additionalProperties: true } }
+    CreateAnalysisRunRequest:
+      type: object
+      required: [projectId, type, source, modules]
+      properties:
+        projectId: { type: string, format: uuid }
+        type: { type: string, enum: [page, domain, ai_visibility, integration] }
+        url: { type: string, format: uri }
+        source: { type: string, enum: [extension, dashboard, schedule, api] }
+        modules:
+          type: array
+          minItems: 1
+          items: { type: string }
+        pageCaptureId: { type: [string, 'null'], format: uuid }
+    AnalysisRun:
+      type: object
+      required: [id, projectId, type, status, progress, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        type: { type: string }
+        status:
+          type: string
+          enum: [queued, running, partial, completed, failed, cancelling, cancelled]
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        coverage: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        confidence: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+    Evidence:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string }
+        excerpt: { type: [string, 'null'] }
+        selector: { type: [string, 'null'] }
+        attributeName: { type: [string, 'null'] }
+        attributeValue: { type: [string, 'null'] }
+        data: { type: object, additionalProperties: true }
+    Finding:
+      type: object
+      required: [id, ruleKey, scoreType, category, status, severity, title]
+      properties:
+        id: { type: string, format: uuid }
+        ruleKey: { type: string }
+        scoreType: { type: string, enum: [seo, geo, ai_visibility] }
+        category: { type: string }
+        status: { type: string, enum: [pass, fail, warn, info, not_applicable, not_tested, unknown, error] }
+        severity: { type: string, enum: [critical, high, medium, low, info] }
+        title: { type: string }
+        explanation: { type: string }
+        impact: { type: string }
+        remediation: { type: string }
+        acceptanceCriteria: { type: string }
+        priority: { type: string, enum: [P0, P1, P2, P3, P4] }
+        effort: { type: integer, minimum: 1, maximum: 5 }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        estimatedScoreGain: { type: number, minimum: 0 }
+        evidences:
+          type: array
+          items: { $ref: '#/components/schemas/Evidence' }
+    FindingList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Finding' }
+        nextCursor: { type: [string, 'null'] }
+    Score:
+      type: object
+      required: [scoreType, rulesetVersion, score, coverage, confidence]
+      properties:
+        scoreType: { type: string, enum: [seo, geo, ai_visibility, discoverability] }
+        rulesetVersion: { type: string }
+        score: { type: number, minimum: 0, maximum: 100 }
+        coverage: { type: number, minimum: 0, maximum: 100 }
+        confidence: { type: number, minimum: 0, maximum: 100 }
+        categories: { type: object, additionalProperties: true }
+        gates: { type: array, items: { type: object, additionalProperties: true } }
+    ActionPlan:
+      type: object
+      required: [id, projectId, name, status, items]
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [draft, active, completed, archived] }
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    CreateVisibilityPromptRequest:
+      type: object
+      required: [text, language, intent]
+      properties:
+        text: { type: string, minLength: 5, maxLength: 1000 }
+        language: { type: string }
+        intent: { type: string }
+        topic: { type: [string, 'null'] }
+        region: { type: [string, 'null'] }
+        priority: { type: integer, minimum: 1, maximum: 5, default: 3 }
+        active: { type: boolean, default: true }
+    Problem:
+      type: object
+      required: [title, status, code]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        correlationId: { type: string }

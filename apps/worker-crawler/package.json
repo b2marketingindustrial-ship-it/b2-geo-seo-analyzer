@@ -1,0 +1,27 @@
+{
+  "name": "@b2/worker-crawler",
+  "version": "0.1.0",
+  "private": true,
+  "description": "B2 GEO/SEO Analyzer — Worker de Crawl (HTTP fetch + Playwright render + SSRF protection)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@b2/analyzers": "workspace:*",
+    "@b2/contracts": "workspace:*",
+    "playwright": "^1.49.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
